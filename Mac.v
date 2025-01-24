@@ -6,7 +6,7 @@ module Mac #(
 ) (
     input clk,
     input reset,
-    input keep,
+    input ena,
     input [OP_WIDTH-1:0] A,
     input [OP_WIDTH-1:0] B,
     output [ACC_WIDTH-1:0] C
@@ -18,7 +18,7 @@ module Mac #(
 
   always @(posedge clk) begin
     if (reset) accumulator <= 0;
-    else if (keep) accumulator <= accumulator;
+    else if (ena) accumulator <= accumulator;
     else accumulator <= accumulator + partial_sum;
   end
 
