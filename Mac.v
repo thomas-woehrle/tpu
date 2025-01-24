@@ -1,8 +1,8 @@
 // Multiply and Accumulate module
 
 module Mac #(
-    parameter integer OP_WIDTH,
-    parameter integer ACC_WIDTH
+    parameter integer OP_WIDTH  = 8,
+    parameter integer ACC_WIDTH = 32
 ) (
     input clk,
     input reset,
@@ -18,8 +18,8 @@ module Mac #(
 
   always @(posedge clk) begin
     if (reset) accumulator <= 0;
-    else if (ena) accumulator <= accumulator;
-    else accumulator <= accumulator + partial_sum;
+    else if (ena) accumulator <= accumulator + partial_sum;
+    else accumulator <= accumulator;
   end
 
   assign C = accumulator;
