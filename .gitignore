@@ -1,3 +1,5 @@
 tests/.venv
+tests/sim_build
 **/*.vvp
 **/__pycache__
+
