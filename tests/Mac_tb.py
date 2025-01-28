@@ -2,6 +2,7 @@ import dataclasses
 
 import cocotb
 from cocotb.clock import Clock
+from cocotb.handle import BinaryValue
 from cocotb.queue import Queue
 from cocotb.runner import get_runner
 from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
@@ -9,31 +10,25 @@ from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 
 @dataclasses.dataclass
 class Snapshot:
-    ena: bool
-    reset: bool
-    A: int
-    B: int
-    C: int
-
-
-@dataclasses.dataclass
-class Transaction[T0, T1]:
-    before_snapshot: T0
-    after_snapshot: T1
+    ena: BinaryValue
+    reset: BinaryValue
+    A: BinaryValue
+    B: BinaryValue
+    C: BinaryValue
 
 
 class Test:
     def __init__(self, dut):
         self.dut = dut
-        self.queue = Queue[Transaction[Snapshot, Snapshot]]()
+        self.queue = Queue[tuple[Snapshot, Snapshot]]()
 
     def get_snapshot_from_dut(self) -> Snapshot:
         return Snapshot(
-            ena=bool(self.dut.ena.value),
-            reset=bool(self.dut.reset.value),
-            A=self.dut.A.value.integer,
-            B=self.dut.B.value.integer,
-            C=self.dut.C.value.integer
+            ena=self.dut.ena.value,
+            reset=self.dut.reset.value,
+            A=self.dut.A.value,
+            B=self.dut.B.value,
+            C=self.dut.C.value
         )
 
     async def monitor(self):
@@ -44,19 +39,23 @@ class Test:
             await FallingEdge(self.dut.clk)
             after_snapshot = self.get_snapshot_from_dut()
 
-            t = Transaction(before_snapshot, after_snapshot)
+            t = (before_snapshot, after_snapshot)
             await self.queue.put(t)
 
     async def score(self):
         while True:
             t = await self.queue.get()
-            if (t.before_snapshot.ena and not t.before_snapshot.reset):
-                expected = t.before_snapshot.A * t.before_snapshot.B + t.before_snapshot.C
-                actual = t.after_snapshot.C
+            if t[0].reset:
+                assert t[1].C == 0
+            elif not t[0].ena:
+                assert t[1].C == t[0].C
+            else:
+                expected = t[0].A * t[0].B + t[0].C
+                actual = t[1].C
 
                 print("expected:", expected, "actual:", actual)
-                assert expected == actual, (f"expected: {
-                                            expected}, actual: {actual}")
+                assert expected == actual, (
+                    f"expected: {expected}, actual: {actual}")
 
     def generate_data(self):
         pass
@@ -68,20 +67,28 @@ class Test:
 @cocotb.test
 async def test_mac_basic(dut):
     clock = Clock(dut.clk, 2, "sec")
-    await cocotb.start(clock.start())
+    cocotb.start_soon(clock.start())
 
-    dut.reset.value = 1
-    await FallingEdge(dut.clk)
+    # synchronize Clk
+    await RisingEdge(dut.clk)
 
+    # Start Monitor and Score
     test = Test(dut)
-    await cocotb.start(test.monitor())
-    await cocotb.start(test.score())
+    cocotb.start_soon(test.monitor())
+    cocotb.start_soon(test.score())
 
-    dut.reset.value = 0
-    dut.ena.value = 1
+    # Reset
+    await FallingEdge(dut.clk)
+    dut.reset.value = 1
     dut.A.value = 3
     dut.B.value = 2
 
+    # Activate Normal Operation
+    await FallingEdge(dut.clk)
+    dut.reset.value = 0
+    dut.ena.value = 1
+
+    # Operate for 4 ClockCycles
     await ClockCycles(dut.clk, 4)
 
 
