@@ -2,7 +2,7 @@
 // Assuming 2x2 Matrices for now
 
 module SystolicMatrixMultiplier #(
-    parameter integer OP_WIDTH
+    parameter integer OP_WIDTH = 8
 ) (
     input clk,
     input reset,
@@ -12,14 +12,21 @@ module SystolicMatrixMultiplier #(
 );
   parameter integer ACC_WIDTH = 18;
   genvar g;
-  wire mac11_ena, mac12_ena, mac21_ena, mac22_ena;
-  wire mac11_ena_next, mac12_ena_next, mac21_ena_next, mac22_ena_next;
-  wire [OP_WIDTH-1:0] mac11_a, mac11_b, mac12_a, mac12_b, mac21_a, mac21_b, mac22_a, mac22_b;
-  wire [OP_WIDTH-1:0] mac11_a_next, mac11_b_next, mac12_a_next, mac12_b_next,
-                    mac21_a_next, mac21_b_next, mac22_a_next, mac22_b_next;
+  reg mac11_ena, mac12_ena, mac21_ena, mac22_ena;
+  reg mac11_ena_next, mac12_ena_next, mac21_ena_next, mac22_ena_next;
+  reg [OP_WIDTH-1:0] mac11_a, mac11_b, mac12_a, mac12_b, mac21_a, mac21_b, mac22_a, mac22_b;
+  reg [OP_WIDTH-1:0]
+      mac11_a_next,
+      mac11_b_next,
+      mac12_a_next,
+      mac12_b_next,
+      mac21_a_next,
+      mac21_b_next,
+      mac22_a_next,
+      mac22_b_next;
 
-  wire [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
-  wire [2:0] state, next_state;  // there are 6 states to be distinguished
+  reg [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
+  reg [2:0] state, next_state;  // there are 6 states to be distinguished
 
   Mac #(
       .OP_WIDTH (OP_WIDTH),
@@ -155,7 +162,22 @@ module SystolicMatrixMultiplier #(
   always @(posedge clk) begin
     if (reset) state <= 0;
     else if (state >= 5) state <= state;
-    else state <= state + 1;
+    else begin
+      state <= state + 1;
+      mac11_ena <= mac11_ena_next;
+      mac12_ena <= mac12_ena_next;
+      mac21_ena <= mac21_ena_next;
+      mac22_ena <= mac22_ena_next;
+
+      mac11_a <= mac11_a_next;
+      mac11_b <= mac11_b_next;
+      mac12_a <= mac12_a_next;
+      mac12_b <= mac12_b_next;
+      mac21_a <= mac21_a_next;
+      mac21_b <= mac21_b_next;
+      mac22_a <= mac22_a_next;
+      mac22_b <= mac22_b_next;
+    end
   end
 
 endmodule
