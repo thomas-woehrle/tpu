@@ -2,6 +2,7 @@
 module Mac #(
     parameter integer OP_WIDTH  = 8,
     parameter integer ACC_WIDTH = 32
+    // 32 should be more than enough. Instantiating modules can specify more precisly
 ) (
     input clk,
     input reset,

@@ -108,22 +108,3 @@ async def test_mac_basic(dut):
 
     # Operate
     await ClockCycles(dut.clk, 100)
-
-
-def main():
-    simulator = get_runner("icarus")
-    simulator.build(
-        sources=["../Mac.v"],
-        hdl_toplevel="Mac",
-        clean=True,
-        waves=True
-    )
-    simulator.test(
-        hdl_toplevel="Mac",
-        test_module="Mac_tb",
-        waves=True
-    )
-
-
-if __name__ == "__main__":
-    main()
