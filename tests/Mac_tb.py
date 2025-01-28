@@ -1,4 +1,5 @@
 import dataclasses
+import random
 
 import cocotb
 from cocotb.clock import Clock
@@ -17,10 +18,19 @@ class Snapshot:
     C: BinaryValue
 
 
+@dataclasses.dataclass
+class Input:
+    ena: bool
+    reset: bool
+    A: int
+    B: int
+
+
 class Test:
     def __init__(self, dut):
         self.dut = dut
-        self.queue = Queue[tuple[Snapshot, Snapshot]]()
+        self.transaction_queue = Queue[tuple[Snapshot, Snapshot]]()
+        self.input_queue = Queue[Input]()
 
     def get_snapshot_from_dut(self) -> Snapshot:
         return Snapshot(
@@ -40,11 +50,11 @@ class Test:
             after_snapshot = self.get_snapshot_from_dut()
 
             t = (before_snapshot, after_snapshot)
-            await self.queue.put(t)
+            await self.transaction_queue.put(t)
 
     async def score(self):
         while True:
-            t = await self.queue.get()
+            t = await self.transaction_queue.get()
             if t[0].reset:
                 assert t[1].C == 0
             elif not t[0].ena:
@@ -57,11 +67,27 @@ class Test:
                 assert expected == actual, (
                     f"expected: {expected}, actual: {actual}")
 
-    def generate_data(self):
-        pass
+    async def generate_input(self, num_accumulations: int):
+        counter = 0
+        while True:
+            d = Input(
+                ena=random.random() < 0.9,  # 90%
+                reset=counter % (num_accumulations + 1) == 0,
+                A=random.randint(0, 255),
+                B=random.randint(0, 255)
+            )
+            await self.input_queue.put(d)
+            await FallingEdge(self.dut.clk)
+            counter += 1
 
-    def drive_data(self):
-        pass
+    async def drive_input(self):
+        while True:
+            await FallingEdge(self.dut.clk)
+            d = await self.input_queue.get()
+            self.dut.reset.value = int(d.reset)
+            self.dut.ena.value = int(d.ena)
+            self.dut.A.value = d.A
+            self.dut.B.value = d.B
 
 
 @cocotb.test
@@ -72,24 +98,16 @@ async def test_mac_basic(dut):
     # synchronize Clk
     await RisingEdge(dut.clk)
 
-    # Start Monitor and Score
+    # Start Monitor, Scoreboard, Input Generator and Input Driver
+    # Input Generator should generate reset as first input
     test = Test(dut)
     cocotb.start_soon(test.monitor())
     cocotb.start_soon(test.score())
+    cocotb.start_soon(test.generate_input(4))
+    cocotb.start_soon(test.drive_input())
 
-    # Reset
-    await FallingEdge(dut.clk)
-    dut.reset.value = 1
-    dut.A.value = 3
-    dut.B.value = 2
-
-    # Activate Normal Operation
-    await FallingEdge(dut.clk)
-    dut.reset.value = 0
-    dut.ena.value = 1
-
-    # Operate for 4 ClockCycles
-    await ClockCycles(dut.clk, 4)
+    # Operate
+    await ClockCycles(dut.clk, 100)
 
 
 def main():

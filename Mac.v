@@ -1,5 +1,4 @@
 // Multiply and Accumulate module
-
 module Mac #(
     parameter integer OP_WIDTH  = 8,
     parameter integer ACC_WIDTH = 32
