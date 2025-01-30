@@ -5,7 +5,6 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.handle import BinaryValue
 from cocotb.queue import Queue
-from cocotb.runner import get_runner
 from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 
 
