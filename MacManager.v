@@ -4,23 +4,17 @@
 
 
 module MacManager #(
-    parameter integer OP_WIDTH = 8
+    parameter integer OP_WIDTH  = 8,
+    parameter integer ACC_WIDTH = 32
 ) (
     input clk,
     input reset,
     input [2*OP_WIDTH-1:0] new_a_column,
-    input [2*OP_WIDTH-1:0] new_b_row,
-    output reg [OP_WIDTH-1:0] mac11_a,
-    mac11_b,
-    mac12_a,
-    mac12_b,
-    mac21_a,
-    mac21_b,
-    mac22_a,
-    mac22_b
+    input [2*OP_WIDTH-1:0] new_b_row
 );
   reg [OP_WIDTH-1:0] mac_a_rows[2][2];
   reg [OP_WIDTH-1:0] mac_b_columns[2][2];
+  wire [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
   integer i;
 
   always @(posedge clk) begin
@@ -43,15 +37,52 @@ module MacManager #(
       end
   end
 
-  always_comb begin
-    mac11_a = mac_a_rows[0][0];
-    mac11_b = mac_b_columns[0][0];
-    mac21_a = mac_a_rows[1][0];
-    mac21_b = mac_b_columns[0][1];
-    mac12_a = mac_a_rows[0][1];
-    mac12_b = mac_b_columns[1][0];
-    mac22_a = mac_a_rows[1][1];
-    mac22_b = mac_b_columns[1][1];
-  end
+  Mac #(
+      .OP_WIDTH (OP_WIDTH),
+      .ACC_WIDTH(ACC_WIDTH)
+  ) mac_11 (
+      .clk(clk),
+      .reset(reset),
+      .ena(1),
+      .A(mac_a_rows[0][0]),
+      .B(mac_b_columns[0][0]),
+      .C(mac11_c)
+  );
+
+  Mac #(
+      .OP_WIDTH (OP_WIDTH),
+      .ACC_WIDTH(ACC_WIDTH)
+  ) mac_12 (
+      .clk(clk),
+      .reset(reset),
+      .ena(1),
+      .A(mac_a_rows[0][1]),
+      .B(mac_b_columns[1][0]),
+      .C(mac12_c)
+  );
+
+  Mac #(
+      .OP_WIDTH (OP_WIDTH),
+      .ACC_WIDTH(ACC_WIDTH)
+  ) mac_21 (
+      .clk(clk),
+      .reset(reset),
+      .ena(1),
+      .A(mac_a_rows[1][0]),
+      .B(mac_b_columns[0][1]),
+      .C(mac21_c)
+  );
+
+  Mac #(
+      .OP_WIDTH (OP_WIDTH),
+      .ACC_WIDTH(ACC_WIDTH)
+  ) mac_22 (
+      .clk(clk),
+      .reset(reset),
+      .ena(1),
+      .A(mac_a_rows[1][1]),
+      .B(mac_b_columns[1][1]),
+      .C(mac22_c)
+  );
 
 endmodule
