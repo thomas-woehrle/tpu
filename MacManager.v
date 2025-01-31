@@ -5,13 +5,13 @@ module MacManager #(
 ) (
     input clk,
     input reset,
-    input [2*OP_WIDTH-1:0] new_a_column,
-    input [2*OP_WIDTH-1:0] new_b_row,
+    input [N*OP_WIDTH-1:0] new_a_column,
+    input [N*OP_WIDTH-1:0] new_b_row,
     output reg [N*N*ACC_WIDTH-1:0] flat_mac_accumulators
 );
-  reg [OP_WIDTH-1:0] mac_a_rows[2][2];
-  reg [OP_WIDTH-1:0] mac_b_columns[2][2];
-  reg [OP_WIDTH-1:0] mac_c[2][2];  // implicity mac_c_rows
+  reg [OP_WIDTH-1:0] mac_a_rows[N][N];
+  reg [OP_WIDTH-1:0] mac_b_columns[N][N];
+  reg [ACC_WIDTH-1:0] mac_c[N][N];  // implicity mac_c_rows
   integer i, j;
   genvar gi, gj;
 
@@ -48,7 +48,7 @@ module MacManager #(
         ) mac_inst (
             .clk(clk),
             .reset(reset),
-            .ena(1),
+            .ena(1'b1),
             .A(mac_a_rows[gi][gj]),
             .B(mac_b_columns[gj][gi]),
             .C(mac_c[gi][gj])
