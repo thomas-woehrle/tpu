@@ -6,13 +6,12 @@ module MacManager #(
     input clk,
     input reset,
     input [2*OP_WIDTH-1:0] new_a_column,
-    input [2*OP_WIDTH-1:0] new_b_row
+    input [2*OP_WIDTH-1:0] new_b_row,
+    output reg [N*N*ACC_WIDTH-1:0] flat_mac_accumulators
 );
   reg [OP_WIDTH-1:0] mac_a_rows[2][2];
   reg [OP_WIDTH-1:0] mac_b_columns[2][2];
-  reg [OP_WIDTH-1:0] mac_c[2][2];
-  // temporary like this, hardcoded for 2x2 matrix
-  wire [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
+  reg [OP_WIDTH-1:0] mac_c[2][2];  // implicity mac_c_rows
   integer i, j;
   genvar gi, gj;
 
@@ -54,14 +53,11 @@ module MacManager #(
             .B(mac_b_columns[gj][gi]),
             .C(mac_c[gi][gj])
         );
+
+        // is this synthesizable? -> https://stackoverflow.com/questions/71055554/is-indexing-into-an-array-with-a-signal-synthesizable-in-verilog
+        assign flat_mac_accumulators[(gi*N+gj)*ACC_WIDTH+:ACC_WIDTH] = mac_c[gi][gj];
       end
     end
   endgenerate
-
-  // temporary:
-  assign mac11_c = mac_c[0][0];
-  assign mac12_c = mac_c[0][1];
-  assign mac21_c = mac_c[1][0];
-  assign mac22_c = mac_c[1][1];
 
 endmodule
