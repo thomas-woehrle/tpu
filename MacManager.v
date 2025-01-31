@@ -4,7 +4,8 @@
 
 
 module MacManager #(
-    parameter integer OP_WIDTH  = 8,
+    parameter integer N = 16,
+    parameter integer OP_WIDTH = 8,
     parameter integer ACC_WIDTH = 32
 ) (
     input clk,
@@ -14,8 +15,10 @@ module MacManager #(
 );
   reg [OP_WIDTH-1:0] mac_a_rows[2][2];
   reg [OP_WIDTH-1:0] mac_b_columns[2][2];
+  reg [OP_WIDTH-1:0] mac_c[2][2];
   wire [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
   integer i;
+  genvar gi, gj;
 
   always @(posedge clk) begin
     if (reset)
@@ -37,52 +40,28 @@ module MacManager #(
       end
   end
 
-  Mac #(
-      .OP_WIDTH (OP_WIDTH),
-      .ACC_WIDTH(ACC_WIDTH)
-  ) mac_11 (
-      .clk(clk),
-      .reset(reset),
-      .ena(1),
-      .A(mac_a_rows[0][0]),
-      .B(mac_b_columns[0][0]),
-      .C(mac11_c)
-  );
+  generate
+    for (gi = 0; gi < N; gi = gi + 1) begin : gen_row
+      for (gj = 0; gj < N; gj = gj + 1) begin : gen_col
+        Mac #(
+            .OP_WIDTH (OP_WIDTH),
+            .ACC_WIDTH(ACC_WIDTH)
+        ) mac_inst (
+            .clk(clk),
+            .reset(reset),
+            .ena(1),
+            .A(mac_a_rows[gi][gj]),
+            .B(mac_b_columns[gj][gi]),
+            .C(mac_c[gi][gj])
+        );
+      end
+    end
+  endgenerate
 
-  Mac #(
-      .OP_WIDTH (OP_WIDTH),
-      .ACC_WIDTH(ACC_WIDTH)
-  ) mac_12 (
-      .clk(clk),
-      .reset(reset),
-      .ena(1),
-      .A(mac_a_rows[0][1]),
-      .B(mac_b_columns[1][0]),
-      .C(mac12_c)
-  );
-
-  Mac #(
-      .OP_WIDTH (OP_WIDTH),
-      .ACC_WIDTH(ACC_WIDTH)
-  ) mac_21 (
-      .clk(clk),
-      .reset(reset),
-      .ena(1),
-      .A(mac_a_rows[1][0]),
-      .B(mac_b_columns[0][1]),
-      .C(mac21_c)
-  );
-
-  Mac #(
-      .OP_WIDTH (OP_WIDTH),
-      .ACC_WIDTH(ACC_WIDTH)
-  ) mac_22 (
-      .clk(clk),
-      .reset(reset),
-      .ena(1),
-      .A(mac_a_rows[1][1]),
-      .B(mac_b_columns[1][1]),
-      .C(mac22_c)
-  );
+  // temporary:
+  assign mac11_c = mac_c[0][0];
+  assign mac12_c = mac_c[0][1];
+  assign mac21_c = mac_c[1][0];
+  assign mac22_c = mac_c[1][1];
 
 endmodule

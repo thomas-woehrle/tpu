@@ -22,6 +22,7 @@ module SystolicMatrixMultiplier #(
     input [2:0] state;
     input [5:0] n;
 
+    // a could also use index (state-row)+n*row
     if (state >= row && state < row + n) get_next_a_element = a[OP_WIDTH*(state+row)+:OP_WIDTH];
     else get_next_a_element = 0;
   endfunction
@@ -45,6 +46,7 @@ module SystolicMatrixMultiplier #(
   reg [2*OP_WIDTH-1:0] new_b_row;
 
   MacManager #(
+      .N(2),
       .OP_WIDTH(OP_WIDTH)
   ) gemm_input_manager (
       .clk(clk),
