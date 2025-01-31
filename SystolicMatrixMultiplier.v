@@ -6,14 +6,27 @@
 */
 
 module SystolicMatrixMultiplier #(
-    parameter integer OP_WIDTH = 8
+    parameter integer OP_WIDTH  = 8,
+    // 32 for now, because it is big enough for most things. Can be finetuned later
+    parameter integer ACC_WIDTH = 32
 ) (
     input clk,
     input reset,
     input [4*OP_WIDTH-1:0] A,
     input [4*OP_WIDTH-1:0] B
 );
-  parameter integer ACC_WIDTH = 18;
+  // not sure whether I can reuse outer variables
+  function static [OP_WIDTH-1:0] get_next_a_element;
+    input [4*OP_WIDTH-1:0] a;
+    input [5:0] row;
+    input [2:0] state;
+    input [5:0] n;
+
+    if (state >= row && state < row + n) get_next_a_element = a[OP_WIDTH*(state+row)+:OP_WIDTH];
+    else get_next_a_element = 0;
+  endfunction
+
+
 
   // there are 6 states to be distinguished, ie n*3
   reg [2:0] state, next_state;
@@ -36,15 +49,13 @@ module SystolicMatrixMultiplier #(
 
   // logic to switch input
   always_comb begin
-    // todo
-    // - probably case over state
-    // - think about how to easily pass values from the array in the GemmInputManager -> fe through smart indexing
-    // - gemmIM inputs will be moved into the macs after the next clk
-    if (state == 0 || state == 1) new_a_column0 = A[OP_WIDTH*state+:OP_WIDTH];
-    else new_a_column0 = 0;
+    new_a_column0 = get_next_a_element(A, 0, state, 2);
+    new_a_column1 = get_next_a_element(A, 1, state, 2);
+    // if (state == 0 || state == 1) new_a_column0 = A[OP_WIDTH*state+:OP_WIDTH];
+    // else new_a_column0 = 0;
 
-    if (state + 1 == 2 || state + 1 == 3) new_a_column1 = A[OP_WIDTH*(state+1)+:OP_WIDTH];
-    else new_a_column1 = 0;
+    // if (state + 1 == 2 || state + 1 == 3) new_a_column1 = A[OP_WIDTH*(state+1)+:OP_WIDTH];
+    // else new_a_column1 = 0;
 
     if (state * 2 == 0 || state * 2 == 2) new_b_row0 = B[OP_WIDTH*(state*2)+:OP_WIDTH];
     else new_b_row0 = 0;
