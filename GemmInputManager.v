@@ -1,3 +1,10 @@
+/*
+  - hardcoded for 2x2 as first step
+  - managing a and b ena signals separately for each index is the foundation for
+  handling non-quadratic matrices later on
+*/
+
+
 module GemmInputManager #(
     parameter integer OP_WIDTH = 8
 ) (
@@ -7,24 +14,23 @@ module GemmInputManager #(
     input [2*OP_WIDTH-1:0] new_b_row,
     input [2-1:0] new_a_column_ena,
     input [2-1:0] new_b_row_ena,
-    output reg [OP_WIDTH-1:0] mac_11_a,
-    mac_11_b,
-    mac_12_a,
-    mac_12_b,
-    mac_21_a,
-    mac_21_b,
-    mac_22_a,
-    mac_22_b,
-    output reg mac_11_a_ena,
-    mac_11_b_ena,
-    mac_12_a_ena,
-    mac_12_b_ena,
-    mac_21_a_ena,
-    mac_21_b_ena,
-    mac_22_a_ena,
-    mac_22_b_ena
+    output reg [OP_WIDTH-1:0] mac11_a,
+    mac11_b,
+    mac12_a,
+    mac12_b,
+    mac21_a,
+    mac21_b,
+    mac22_a,
+    mac22_b,
+    output reg mac11_a_ena,
+    mac11_b_ena,
+    mac12_a_ena,
+    mac12_b_ena,
+    mac21_a_ena,
+    mac21_b_ena,
+    mac22_a_ena,
+    mac22_b_ena
 );
-  // hardcoded for 2x2 as first step
   reg [OP_WIDTH-1:0] mac_a_rows[2][2];
   reg [OP_WIDTH-1:0] mac_b_columns[2][2];
   reg mac_a_rows_ena[2][2];
@@ -60,23 +66,23 @@ module GemmInputManager #(
   end
 
   always_comb begin
-    mac_11_a = mac_a_rows[0][0];
-    mac_11_b = mac_b_columns[0][0];
-    mac_21_a = mac_a_rows[1][0];
-    mac_21_b = mac_b_columns[0][1];
-    mac_12_a = mac_a_rows[0][1];
-    mac_12_b = mac_b_columns[1][0];
-    mac_22_a = mac_a_rows[1][1];
-    mac_22_b = mac_b_columns[1][1];
+    mac11_a = mac_a_rows[0][0];
+    mac11_b = mac_b_columns[0][0];
+    mac21_a = mac_a_rows[1][0];
+    mac21_b = mac_b_columns[0][1];
+    mac12_a = mac_a_rows[0][1];
+    mac12_b = mac_b_columns[1][0];
+    mac22_a = mac_a_rows[1][1];
+    mac22_b = mac_b_columns[1][1];
 
-    mac_11_a_ena = mac_a_rows_ena[0][0];
-    mac_11_b_ena = mac_b_columns_ena[0][0];
-    mac_21_a_ena = mac_a_rows_ena[1][0];
-    mac_21_b_ena = mac_b_columns_ena[0][1];
-    mac_12_a_ena = mac_a_rows_ena[0][1];
-    mac_12_b_ena = mac_b_columns_ena[1][0];
-    mac_22_a_ena = mac_a_rows_ena[1][1];
-    mac_22_b_ena = mac_b_columns_ena[1][1];
+    mac11_a_ena = mac_a_rows_ena[0][0];
+    mac11_b_ena = mac_b_columns_ena[0][0];
+    mac21_a_ena = mac_a_rows_ena[1][0];
+    mac21_b_ena = mac_b_columns_ena[0][1];
+    mac12_a_ena = mac_a_rows_ena[0][1];
+    mac12_b_ena = mac_b_columns_ena[1][0];
+    mac22_a_ena = mac_a_rows_ena[1][1];
+    mac22_b_ena = mac_b_columns_ena[1][1];
   end
 
 endmodule

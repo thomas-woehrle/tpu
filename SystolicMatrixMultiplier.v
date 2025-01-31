@@ -1,5 +1,9 @@
-
-// Assuming 2x2 Matrices for now
+/*
+  - Assuming 2x2 Matrices for now
+  - Might need a function or similar to convert 1D array to 2D array
+  - Potentially better to fix the size of the top-level matrix multiplier module,
+  and operating through enas in the gemmIM -> google tpu also does it this way
+*/
 
 module SystolicMatrixMultiplier #(
     parameter integer OP_WIDTH = 8
@@ -11,22 +15,64 @@ module SystolicMatrixMultiplier #(
     output [4*OP_WIDTH-1:0] C
 );
   parameter integer ACC_WIDTH = 18;
-  genvar g;
-  reg mac11_ena, mac12_ena, mac21_ena, mac22_ena;
-  reg mac11_ena_next, mac12_ena_next, mac21_ena_next, mac22_ena_next;
-  reg [OP_WIDTH-1:0] mac11_a, mac11_b, mac12_a, mac12_b, mac21_a, mac21_b, mac22_a, mac22_b;
-  reg [OP_WIDTH-1:0]
-      mac11_a_next,
-      mac11_b_next,
-      mac12_a_next,
-      mac12_b_next,
-      mac21_a_next,
-      mac21_b_next,
-      mac22_a_next,
-      mac22_b_next;
 
+  // there are 6 states to be distinguished, ie n*3
+  reg [2:0] state, next_state;
+
+  // GemmInputManager input
+  reg [2*OP_WIDTH-1:0] new_a_column;
+  reg [2*OP_WIDTH-1:0] new_b_row;
+  reg [2-1:0] new_a_column_ena;
+  reg [2-1:0] new_b_row_ena;
+
+  // GemmInputManager output and Mac input
+  reg mac11_ena, mac12_ena, mac21_ena, mac22_ena;
+  reg
+      mac11_a_ena,
+      mac11_b_ena,
+      mac12_a_ena,
+      mac12_b_ena,
+      mac21_a_ena,
+      mac21_b_ena,
+      mac22_a_ena,
+      mac22_b_ena;
+
+  assign mac11_ena = mac11_a_ena && mac11_b_ena;
+  assign mac12_ena = mac12_a_ena && mac12_b_ena;
+  assign mac21_ena = mac21_a_ena && mac21_b_ena;
+  assign mac22_ena = mac22_a_ena && mac22_b_ena;
+
+  reg [OP_WIDTH-1:0] mac11_a, mac11_b, mac12_a, mac12_b, mac21_a, mac21_b, mac22_a, mac22_b;
+
+  // Mac outpus
   reg [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
-  reg [2:0] state, next_state;  // there are 6 states to be distinguished
+
+  GemmInputManager #(
+      .OP_WIDTH(OP_WIDTH)
+  ) gemm_input_manager (
+      .clk(clk),
+      .reset(reset),
+      .new_a_column(new_a_column),
+      .new_b_row(new_b_row),
+      .new_a_column_ena(new_a_column_ena),
+      .new_b_row_ena(new_b_row_ena),
+      .mac11_a(mac11_a),
+      .mac11_b(mac11_b),
+      .mac12_a(mac12_a),
+      .mac12_b(mac12_b),
+      .mac21_a(mac21_a),
+      .mac21_b(mac21_b),
+      .mac22_a(mac22_a),
+      .mac22_b(mac22_b),
+      .mac11_a_ena(mac11_a_ena),
+      .mac11_b_ena(mac11_b_ena),
+      .mac12_a_ena(mac12_a_ena),
+      .mac12_b_ena(mac12_b_ena),
+      .mac21_a_ena(mac21_a_ena),
+      .mac21_b_ena(mac21_b_ena),
+      .mac22_a_ena(mac22_a_ena),
+      .mac22_b_ena(mac22_b_ena)
+  );
 
   Mac #(
       .OP_WIDTH (OP_WIDTH),
@@ -76,108 +122,24 @@ module SystolicMatrixMultiplier #(
       .C(mac22_c)
   );
 
-  // logic to switch ena_mac, a_mac, b_mac
+  // logic to switch input
   always_comb begin
-    case (state)
-      0: begin
-        mac11_ena_next = 1;
-        mac12_ena_next = 0;
-        mac21_ena_next = 0;
-        mac22_ena_next = 0;
-
-        mac11_a_next   = A[0*OP_WIDTH+:OP_WIDTH];
-        mac11_b_next   = B[0*OP_WIDTH+:OP_WIDTH];
-        mac12_a_next   = mac12_a;
-        mac12_b_next   = mac12_b;
-        mac21_a_next   = mac21_a;
-        mac21_b_next   = mac21_b;
-        mac22_a_next   = mac22_a;
-        mac22_b_next   = mac22_b;
-      end
-      1: begin
-        mac11_ena_next = 1;
-        mac12_ena_next = 1;
-        mac21_ena_next = 1;
-        mac22_ena_next = 0;
-
-        mac11_a_next   = A[1*OP_WIDTH+:OP_WIDTH];
-        mac11_b_next   = B[2*OP_WIDTH+:OP_WIDTH];
-        mac12_a_next   = A[0*OP_WIDTH+:OP_WIDTH];
-        mac12_b_next   = B[1*OP_WIDTH+:OP_WIDTH];
-        mac21_a_next   = A[2*OP_WIDTH+:OP_WIDTH];
-        mac21_b_next   = B[0*OP_WIDTH+:OP_WIDTH];
-        mac22_a_next   = mac22_a;
-        mac22_b_next   = mac22_b;
-      end
-      2: begin
-        mac11_ena_next = 0;
-        mac12_ena_next = 1;
-        mac21_ena_next = 1;
-        mac22_ena_next = 1;
-
-        mac11_a_next   = mac11_a;
-        mac11_b_next   = mac11_b;
-        mac12_a_next   = A[1*OP_WIDTH+:OP_WIDTH];
-        mac12_b_next   = B[3*OP_WIDTH+:OP_WIDTH];
-        mac21_a_next   = A[3*OP_WIDTH+:OP_WIDTH];
-        mac21_b_next   = B[2*OP_WIDTH+:OP_WIDTH];
-        mac22_a_next   = A[2*OP_WIDTH+:OP_WIDTH];
-        mac22_b_next   = B[1*OP_WIDTH+:OP_WIDTH];
-      end
-      3: begin
-        mac11_ena_next = 0;
-        mac12_ena_next = 0;
-        mac21_ena_next = 0;
-        mac22_ena_next = 1;
-
-        mac11_a_next   = mac11_a;
-        mac11_b_next   = mac11_b;
-        mac12_a_next   = mac12_a;
-        mac12_b_next   = mac12_b;
-        mac21_a_next   = mac21_a;
-        mac21_b_next   = mac21_b;
-        mac22_a_next   = A[3*OP_WIDTH+:OP_WIDTH];
-        mac22_b_next   = B[3*OP_WIDTH+:OP_WIDTH];
-      end
-      4: begin
-        mac11_ena_next = 0;
-        mac12_ena_next = 0;
-        mac21_ena_next = 0;
-        mac22_ena_next = 0;
-
-        mac11_a_next   = 0;
-        mac11_b_next   = 0;
-        mac12_a_next   = 0;
-        mac12_b_next   = 0;
-        mac21_a_next   = 0;
-        mac21_b_next   = 0;
-        mac22_a_next   = 0;
-        mac22_b_next   = 0;
-      end
-      5: ;  // ?
-      default: ;
-    endcase
+    // todo
+    // - probably case over state
+    // - think about how to easily pass values from the array in the GemmInputManager -> fe through smart indexing
+    // - gemmIM inputs will be moved into the macs after the next clk
+    new_a_column = {A[OP_WIDTH*(state+1)+:OP_WIDTH], A[OP_WIDTH*state+:OP_WIDTH]};
+    new_b_row = {B[OP_WIDTH*((state*2)-1)+:OP_WIDTH], B[OP_WIDTH*(state*2)+:OP_WIDTH]};  // 2==n
+    new_a_column_ena = {(state + 1 == 2 || state + 1 == 3), (state == 0 || state == 1)};
+    new_b_row_ena = {
+      (state * 2 - 1 == 1 || state * 2 - 1 == 3), (state * 2 == 0 || state * 2 == 2)
+    };
   end
 
   always @(posedge clk) begin
     if (reset) state <= 0;
     else if (state >= 5) state <= state;
-    else begin
-      state <= state + 1;
-      mac11_ena <= mac11_ena_next;
-      mac12_ena <= mac12_ena_next;
-      mac21_ena <= mac21_ena_next;
-      mac22_ena <= mac22_ena_next;
-
-      mac11_a <= mac11_a_next;
-      mac11_b <= mac11_b_next;
-      mac12_a <= mac12_a_next;
-      mac12_b <= mac12_b_next;
-      mac21_a <= mac21_a_next;
-      mac21_b <= mac21_b_next;
-      mac22_a <= mac22_a_next;
-      mac22_b <= mac22_b_next;
-    end
+    else state <= state + 1;
   end
 
 endmodule

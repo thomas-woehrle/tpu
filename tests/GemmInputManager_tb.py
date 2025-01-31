@@ -5,11 +5,11 @@ from cocotb.triggers import FallingEdge, RisingEdge
 
 
 # TODO refactor these methods in an utils file
-def pack_array_to_int(array: list[int] | np.ndarray, op_width: int):
+def pack_array_to_int(array: list[int], op_width: int):
     """
     Creates an integer representing the elements of the array as binary. 
 
-    Elements with lower index with be at lower significant bits - i.e. array[0] will be the LSBs
+    Elements with lower index will be at lower significant bits - i.e. array[0] will be the LSBs
     """
     packed_value = 0
     for i, value in enumerate(array):
