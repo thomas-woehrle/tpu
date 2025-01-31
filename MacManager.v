@@ -1,8 +1,3 @@
-/*
-  - hardcoded for 2x2 as first step
-*/
-
-
 module MacManager #(
     parameter integer N = 16,
     parameter integer OP_WIDTH = 8,
@@ -16,27 +11,32 @@ module MacManager #(
   reg [OP_WIDTH-1:0] mac_a_rows[2][2];
   reg [OP_WIDTH-1:0] mac_b_columns[2][2];
   reg [OP_WIDTH-1:0] mac_c[2][2];
+  // temporary like this, hardcoded for 2x2 matrix
   wire [ACC_WIDTH-1:0] mac11_c, mac12_c, mac21_c, mac22_c;
-  integer i;
+  integer i, j;
   genvar gi, gj;
 
   always @(posedge clk) begin
     if (reset)
-      for (i = 0; i < 2; i = i + 1) begin
-        mac_a_rows[i][0] <= 0;
-        mac_a_rows[i][1] <= 0;
-
-        mac_b_columns[i][0] <= 0;
-        mac_b_columns[i][1] <= 0;
+      for (i = 0; i < N; i = i + 1) begin
+        for (j = 0; j < N; j = j + 1) begin
+          // i is row, j is column for a and vice versa for b -> allows for simple assignment
+          mac_a_rows[i][j] <= 0;
+          mac_b_columns[i][j] <= 0;
+        end
       end
     else
-      for (i = 0; i < 2; i = i + 1) begin
-        // i stands for the i-th row (a) or the i-th column (b)
-        mac_a_rows[i][0] <= new_a_column[i*OP_WIDTH+:OP_WIDTH];
-        mac_a_rows[i][1] <= mac_a_rows[i][0];
-
-        mac_b_columns[i][0] <= new_b_row[i*OP_WIDTH+:OP_WIDTH];
-        mac_b_columns[i][1] <= mac_b_columns[i][0];
+      for (i = 0; i < N; i = i + 1) begin
+        for (j = 0; j < N; j = j + 1) begin
+          // same as in reset case
+          if (j == 0) begin
+            mac_a_rows[i][j] <= new_a_column[i*OP_WIDTH+:OP_WIDTH];
+            mac_b_columns[i][j] <= new_b_row[i*OP_WIDTH+:OP_WIDTH];
+          end else begin
+            mac_a_rows[i][j] <= mac_a_rows[i][j-1];
+            mac_b_columns[i][j] <= mac_b_columns[i][j-1];
+          end
+        end
       end
   end
 
