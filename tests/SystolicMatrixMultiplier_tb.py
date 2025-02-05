@@ -7,8 +7,8 @@ from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 
+from test_base import TestBase
 from utils import pack_matrix_to_int, unpack_int_to_matrix
-
 
 # 3 states per N are managed in the matrix multiplier
 STATES_PER_N = 3
@@ -43,13 +43,9 @@ def get_params_from_env() -> Parameters:
     return params
 
 
-class Test:
-    def __init__(self, dut, params: Parameters, n_checks: int):
-        self.dut = dut
-        self.params = params
-        self.n_checks = n_checks
-        self.transaction_queue = Queue[tuple[Input, Output]]()
-        self.input_queue = Queue[Input]()
+class RefactoredTest(TestBase[Parameters, Input, Output]):
+    def __init__(self, dut, params, n_checks):
+        super().__init__(dut, params, n_checks)
 
     def get_input_from_dut(self) -> Input:
         return Input(
@@ -69,43 +65,33 @@ class Test:
             )
         )
 
-    async def monitor(self):
-        await RisingEdge(self.dut.clk)
-        while True:
-            input = self.get_input_from_dut()
+    async def wait_in_monitor(self, curr_input: Input):
+        if curr_input.reset:
+            "Waiting 1"
+            await ClockCycles(self.dut.clk, 1)
+        else:
+            await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
 
-            if (input.reset):
-                await ClockCycles(self.dut.clk, 1)
-            else:
-                await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
-            output = self.get_output_from_dut()
+    async def score_transaction(self, t: tuple[Input, Output]):
+        if t[0].reset:
+            cocotb.log.info("Asserting reset")
+            assert np.all(t[1].c == 0)
+        else:
+            expected = t[0].a @ t[0].b
+            actual = t[1].c
 
-            # put transaction in queue
-            t = (input, output)
-            await self.transaction_queue.put(t)
+            assert np.all(expected == actual), (
+                f"""
+                Calculating: \n
+                {t[0].a} \n\n
+                @ \n\n
+                {t[0].b} \n\n
 
-    async def score(self):
-        while True:
-            t = await self.transaction_queue.get()
-            if t[0].reset:
-                cocotb.log.info("Asserting reset")
-                assert np.all(t[1].c == 0)
-            else:
-                expected = t[0].a @ t[0].b
-                actual = t[1].c
-
-                assert np.all(expected == actual), (
-                    f"""
-                    Calculating: \n
-                    {t[0].a} \n\n
-                    @ \n\n
-                    {t[0].b} \n\n
-
-                    Expected: \n
-                    {expected} \n
-                    Actual: \n
-                    {actual}
-                """)
+                Expected: \n
+                {expected} \n
+                Actual: \n
+                {actual}
+            """)
 
     async def generate_input(self):
         # val_max is exclusive
@@ -128,7 +114,6 @@ class Test:
             await self.input_queue.put(d)
 
     async def drive_input(self):
-        counter = 0
         while True:
             await FallingEdge(self.dut.clk)
             d = await self.input_queue.get()
@@ -139,7 +124,6 @@ class Test:
                 await ClockCycles(self.dut.clk, 1)
             else:
                 await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
-            counter += 1
 
 
 @cocotb.test
@@ -154,11 +138,8 @@ async def test_systolic_matrix_multiplier(dut):
     await RisingEdge(dut.clk)
 
     n_checks = 20
-    test = Test(dut, params, n_checks)
-    cocotb.start_soon(test.monitor())
-    cocotb.start_soon(test.score())
-    cocotb.start_soon(test.generate_input())
-    cocotb.start_soon(test.drive_input())
+    test = RefactoredTest(dut, params, n_checks)
+    test.start_soon()
 
     # Operate
     cycles_per_reset = 1
