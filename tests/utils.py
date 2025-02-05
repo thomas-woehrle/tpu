@@ -1,5 +1,17 @@
+import os
+
 import numpy as np
 from cocotb.binary import BinaryValue
+
+
+def get_params_from_env[ParamType](paramCls: type[ParamType]) -> ParamType:
+    params = paramCls()
+
+    for k, v in os.environ.items():
+        if k.startswith("DUT_"):
+            setattr(params, k[4:], int(v))
+
+    return params
 
 
 def pack_matrix_to_int(matrix: np.ndarray, op_width: int) -> int:

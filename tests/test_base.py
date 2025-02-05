@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 
 import cocotb
@@ -5,11 +6,22 @@ from cocotb.queue import Queue
 from cocotb.triggers import FallingEdge, RisingEdge
 
 
+def get_params_from_env[ParameterType](paramCls: type[ParameterType]) -> ParameterType:
+    params = paramCls()
+
+    for k, v in os.environ.items():
+        if k.startswith("DUT_"):
+            setattr(params, k[4:], int(v))
+
+    return params
+
+
 class TestBase[ParamsType, DutSnapshotType, InputType](ABC):
     # Potentially move to just a dut type, which also types the self.dut indirectly
     def __init__(self, dut, params: ParamsType, n_checks: int):
         self.dut = dut
         self.params = params
+        cocotb.log.info(self.params)
         self.n_checks = n_checks
         self.transaction_queue = Queue[tuple[DutSnapshotType, DutSnapshotType]](
         )

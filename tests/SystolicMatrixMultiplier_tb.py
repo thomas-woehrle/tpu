@@ -7,7 +7,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles
 
 from test_base import TestBase
-from utils import pack_matrix_to_int, unpack_binary_value_to_matrix
+from utils import get_params_from_env, pack_matrix_to_int, unpack_binary_value_to_matrix
 
 # 3 states per N are managed in the matrix multiplier
 STATES_PER_N = 3
@@ -33,16 +33,6 @@ class DutSnapshot:
     a: np.ndarray | None
     b: np.ndarray | None
     c: np.ndarray | None
-
-
-def get_params_from_env() -> Parameters:
-    params = Parameters()
-
-    for k, v in os.environ.items():
-        if k.startswith("DUT_"):
-            setattr(params, k[4:], int(v))
-
-    return params
 
 
 class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
@@ -124,15 +114,13 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
 
 @cocotb.test
 async def test_systolic_matrix_multiplier(dut):
-    params = get_params_from_env()
-    cocotb.log.info(params)
-
     clock = Clock(dut.clk, 10, "ns")
     cocotb.start_soon(clock.start())
 
     # Synchronize clock
     await RisingEdge(dut.clk)
 
+    params = params = get_params_from_env(Parameters)
     n_checks = 20
     test = SystolicMatrixMultiplierTest(dut, params, n_checks)
     test.start_soon()
