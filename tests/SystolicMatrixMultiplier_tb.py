@@ -24,13 +24,13 @@ class Parameters:
 @dataclasses.dataclass
 class Input:
     reset: bool
-    A: np.ndarray
-    B: np.ndarray
+    a: np.ndarray
+    b: np.ndarray
 
 
 @dataclasses.dataclass
 class Output:
-    C: np.ndarray
+    c: np.ndarray
 
 
 def get_params_from_env() -> Parameters:
@@ -54,15 +54,15 @@ class Test:
     def get_input_from_dut(self) -> Input:
         return Input(
             reset=bool(self.dut.reset.value),
-            A=unpack_int_to_matrix(
-                self.dut.A.value, (self.params.N, self.params.N), self.params.OP_WIDTH),
-            B=unpack_int_to_matrix(
-                self.dut.B.value, (self.params.N, self.params.N), self.params.OP_WIDTH)
+            a=unpack_int_to_matrix(
+                self.dut.a.value, (self.params.N, self.params.N), self.params.OP_WIDTH),
+            b=unpack_int_to_matrix(
+                self.dut.b.value, (self.params.N, self.params.N), self.params.OP_WIDTH)
         )
 
     def get_output_from_dut(self) -> Output:
         return Output(
-            C=unpack_int_to_matrix(
+            c=unpack_int_to_matrix(
                 self.dut.mac_manager.flat_mac_accumulators.value,
                 (self.params.N, self.params.N),
                 self.params.ACC_WIDTH
@@ -89,17 +89,17 @@ class Test:
             t = await self.transaction_queue.get()
             if t[0].reset:
                 cocotb.log.info("Asserting reset")
-                assert np.all(t[1].C == 0)
+                assert np.all(t[1].c == 0)
             else:
-                expected = t[0].A @ t[0].B
-                actual = t[1].C
+                expected = t[0].a @ t[0].b
+                actual = t[1].c
 
                 assert np.all(expected == actual), (
                     f"""
                     Calculating: \n
-                    {t[0].A} \n\n
+                    {t[0].a} \n\n
                     @ \n\n
-                    {t[0].B} \n\n
+                    {t[0].b} \n\n
 
                     Expected: \n
                     {expected} \n
@@ -114,16 +114,16 @@ class Test:
         for i in range(self.n_checks):
             d = Input(
                 reset=True,
-                A=np.random.randint(
+                a=np.random.randint(
                     0, val_max, (self.params.N, self.params.N)),
-                B=np.random.randint(0, val_max, (self.params.N, self.params.N))
+                b=np.random.randint(0, val_max, (self.params.N, self.params.N))
             )
             await self.input_queue.put(d)
             d = Input(
                 reset=False,
-                A=np.random.randint(
+                a=np.random.randint(
                     0, val_max, (self.params.N, self.params.N)),
-                B=np.random.randint(0, val_max, (self.params.N, self.params.N))
+                b=np.random.randint(0, val_max, (self.params.N, self.params.N))
             )
             await self.input_queue.put(d)
 
@@ -133,8 +133,8 @@ class Test:
             await FallingEdge(self.dut.clk)
             d = await self.input_queue.get()
             self.dut.reset.value = int(d.reset)
-            self.dut.A.value = pack_matrix_to_int(d.A, self.params.OP_WIDTH)
-            self.dut.B.value = pack_matrix_to_int(d.B, self.params.OP_WIDTH)
+            self.dut.a.value = pack_matrix_to_int(d.a, self.params.OP_WIDTH)
+            self.dut.b.value = pack_matrix_to_int(d.b, self.params.OP_WIDTH)
             if (d.reset):
                 await ClockCycles(self.dut.clk, 1)
             else:

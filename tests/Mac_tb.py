@@ -12,17 +12,17 @@ from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 class Snapshot:
     ena: BinaryValue
     reset: BinaryValue
-    A: BinaryValue
-    B: BinaryValue
-    C: BinaryValue
+    a: BinaryValue
+    b: BinaryValue
+    c: BinaryValue
 
 
 @dataclasses.dataclass
 class Input:
     ena: bool
     reset: bool
-    A: int
-    B: int
+    a: int
+    b: int
 
 
 class Test:
@@ -35,9 +35,9 @@ class Test:
         return Snapshot(
             ena=self.dut.ena.value,
             reset=self.dut.reset.value,
-            A=self.dut.A.value,
-            B=self.dut.B.value,
-            C=self.dut.C.value
+            a=self.dut.a.value,
+            b=self.dut.b.value,
+            c=self.dut.c.value
         )
 
     async def monitor(self):
@@ -55,12 +55,12 @@ class Test:
         while True:
             t = await self.transaction_queue.get()
             if t[0].reset:
-                assert t[1].C == 0
+                assert t[1].c == 0
             elif not t[0].ena:
-                assert t[1].C == t[0].C
+                assert t[1].c == t[0].c
             else:
-                expected = t[0].A * t[0].B + t[0].C
-                actual = t[1].C
+                expected = t[0].a * t[0].b + t[0].c
+                actual = t[1].c
 
                 print("expected:", expected, "actual:", actual)
                 assert expected == actual, (
@@ -72,8 +72,8 @@ class Test:
             d = Input(
                 ena=random.random() < 0.9,  # 90%
                 reset=counter % (num_accumulations + 1) == 0,
-                A=random.randint(0, 255),
-                B=random.randint(0, 255)
+                a=random.randint(0, 255),
+                b=random.randint(0, 255)
             )
             await self.input_queue.put(d)
             await FallingEdge(self.dut.clk)
@@ -85,8 +85,8 @@ class Test:
             d = await self.input_queue.get()
             self.dut.reset.value = int(d.reset)
             self.dut.ena.value = int(d.ena)
-            self.dut.A.value = d.A
-            self.dut.B.value = d.B
+            self.dut.a.value = d.a
+            self.dut.b.value = d.b
 
 
 @cocotb.test
