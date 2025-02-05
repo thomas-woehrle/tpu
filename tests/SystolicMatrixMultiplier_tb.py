@@ -161,4 +161,7 @@ async def test_systolic_matrix_multiplier(dut):
     cocotb.start_soon(test.drive_input())
 
     # Operate
-    await ClockCycles(dut.clk, 1000)
+    cycles_per_reset = 1
+    n_cycles = n_checks * (STATES_PER_N * params.N + cycles_per_reset)
+    cocotb.log.info(f"Run for {n_cycles} cycles...")
+    await ClockCycles(dut.clk, n_cycles)
