@@ -5,8 +5,8 @@ module MacManager #(
 ) (
     input clk,
     input reset,
-    input [N*OP_WIDTH-1:0] new_a_column,
-    input [N*OP_WIDTH-1:0] new_b_row,
+    input [N*OP_WIDTH-1:0] next_a_column,
+    input [N*OP_WIDTH-1:0] next_b_row,
     output reg [N*N*ACC_WIDTH-1:0] flat_mac_accumulators
 );
   reg [OP_WIDTH-1:0] mac_a_rows[N][N];
@@ -29,8 +29,8 @@ module MacManager #(
         for (j = 0; j < N; j = j + 1) begin
           // same as in reset case
           if (j == 0) begin
-            mac_a_rows[i][j] <= new_a_column[i*OP_WIDTH+:OP_WIDTH];
-            mac_b_columns[i][j] <= new_b_row[i*OP_WIDTH+:OP_WIDTH];
+            mac_a_rows[i][j] <= next_a_column[i*OP_WIDTH+:OP_WIDTH];
+            mac_b_columns[i][j] <= next_b_row[i*OP_WIDTH+:OP_WIDTH];
           end else begin
             mac_a_rows[i][j] <= mac_a_rows[i][j-1];
             mac_b_columns[i][j] <= mac_b_columns[i][j-1];

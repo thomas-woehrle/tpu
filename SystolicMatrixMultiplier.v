@@ -38,8 +38,8 @@ module SystolicMatrixMultiplier #(
   reg [2+LOG2_MAX_N-1:0] state;
 
   // MacManager input
-  reg [  N*OP_WIDTH-1:0] new_a_column;
-  reg [  N*OP_WIDTH-1:0] new_b_row;
+  reg [  N*OP_WIDTH-1:0] next_a_column;
+  reg [  N*OP_WIDTH-1:0] next_b_row;
 
   genvar gi;
 
@@ -50,14 +50,14 @@ module SystolicMatrixMultiplier #(
   ) mac_manager (
       .clk(clk),
       .reset(reset),
-      .new_a_column(new_a_column),
-      .new_b_row(new_b_row)
+      .next_a_column(next_a_column),
+      .next_b_row(next_b_row)
   );
 
   generate
     for (gi = 0; gi < N; gi = gi + 1) begin : gen_rowcol_assignments
-      assign new_a_column[OP_WIDTH*gi+:OP_WIDTH] = get_next_a_column_element(a, gi, state);
-      assign new_b_row[OP_WIDTH*gi+:OP_WIDTH] = get_next_b_row_element(b, gi, state);
+      assign next_a_column[OP_WIDTH*gi+:OP_WIDTH] = get_next_a_column_element(a, gi, state);
+      assign next_b_row[OP_WIDTH*gi+:OP_WIDTH] = get_next_b_row_element(b, gi, state);
     end
   endgenerate
 
