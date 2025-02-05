@@ -11,13 +11,15 @@ def main(dut_name: str, sources: list[str], parameters: dict[str, int]):
         hdl_toplevel=dut_name,
         clean=True,
         waves=True,
-        parameters=parameters
+        parameters=parameters,
+        timescale=("10ns", "100ps")
     )
     simulator.test(
         hdl_toplevel=dut_name,
         test_module=dut_name + "_tb",
         waves=True,
-        parameters=parameters
+        parameters=parameters,
+        timescale=("10ns", "100ps")
     )
 
 

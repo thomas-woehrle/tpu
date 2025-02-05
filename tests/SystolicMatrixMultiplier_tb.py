@@ -108,6 +108,7 @@ class Test:
                 """)
 
     async def generate_input(self):
+        # val_max is exclusive
         val_max = 2 ** self.params.OP_WIDTH
 
         for i in range(self.n_checks):
@@ -146,7 +147,7 @@ async def test_systolic_matrix_multiplier(dut):
     params = get_params_from_env()
     cocotb.log.info(params)
 
-    clock = Clock(dut.clk, 2, "sec")
+    clock = Clock(dut.clk, 10, "ns")
     cocotb.start_soon(clock.start())
 
     # Synchronize clock
