@@ -44,9 +44,10 @@ def get_params_from_env() -> Parameters:
 
 
 class Test:
-    def __init__(self, dut, params: Parameters):
+    def __init__(self, dut, params: Parameters, n_checks: int):
         self.dut = dut
         self.params = params
+        self.n_checks = n_checks
         self.transaction_queue = Queue[tuple[Input, Output]]()
         self.input_queue = Queue[Input]()
 
@@ -109,7 +110,7 @@ class Test:
     async def generate_input(self):
         val_max = 2 ** self.params.OP_WIDTH
 
-        for i in range(20):  # just producing 20 inputs -> should be finetuned
+        for i in range(self.n_checks):
             d = Input(
                 reset=True,
                 A=np.random.randint(
@@ -151,7 +152,8 @@ async def test_systolic_matrix_multiplier(dut):
     # Synchronize clock
     await RisingEdge(dut.clk)
 
-    test = Test(dut, params)
+    n_checks = 20
+    test = Test(dut, params, n_checks)
     cocotb.start_soon(test.monitor())
     cocotb.start_soon(test.score())
     cocotb.start_soon(test.generate_input())
