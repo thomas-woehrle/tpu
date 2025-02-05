@@ -9,8 +9,8 @@ module SystolicMatrixMultiplier #(
 ) (
     input clk,
     input reset,
-    input [N*N*OP_WIDTH-1:0] A,
-    input [N*N*OP_WIDTH-1:0] B
+    input [N*N*OP_WIDTH-1:0] a,
+    input [N*N*OP_WIDTH-1:0] b
 );
 
   // not sure whether I can/should reuse variables from the outer scope ie the module
@@ -56,8 +56,8 @@ module SystolicMatrixMultiplier #(
 
   generate
     for (gi = 0; gi < N; gi = gi + 1) begin : gen_rowcol_assignments
-      assign new_a_column[OP_WIDTH*gi+:OP_WIDTH] = get_next_a_column_element(A, gi, state);
-      assign new_b_row[OP_WIDTH*gi+:OP_WIDTH] = get_next_b_row_element(B, gi, state);
+      assign new_a_column[OP_WIDTH*gi+:OP_WIDTH] = get_next_a_column_element(a, gi, state);
+      assign new_b_row[OP_WIDTH*gi+:OP_WIDTH] = get_next_b_row_element(b, gi, state);
     end
   endgenerate
 

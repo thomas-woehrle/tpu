@@ -6,14 +6,14 @@ module Mac #(
     input clk,
     input reset,
     input ena,
-    input [OP_WIDTH-1:0] A,
-    input [OP_WIDTH-1:0] B,
-    output [ACC_WIDTH-1:0] C
+    input [OP_WIDTH-1:0] a,
+    input [OP_WIDTH-1:0] b,
+    output [ACC_WIDTH-1:0] c
 );
   wire [2*OP_WIDTH-1:0] partial_sum;
   reg  [ ACC_WIDTH-1:0] accumulator;
 
-  assign partial_sum = A * B;
+  assign partial_sum = a * b;
 
   always @(posedge clk) begin
     if (reset) accumulator <= 0;
@@ -21,6 +21,6 @@ module Mac #(
     else accumulator <= accumulator;
   end
 
-  assign C = accumulator;
+  assign c = accumulator;
 
 endmodule

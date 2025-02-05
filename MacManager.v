@@ -49,9 +49,9 @@ module MacManager #(
             .clk(clk),
             .reset(reset),
             .ena(1'b1),
-            .A(mac_a_rows[gi][gj]),
-            .B(mac_b_columns[gj][gi]),
-            .C(mac_c[gi][gj])
+            .a(mac_a_rows[gi][gj]),
+            .b(mac_b_columns[gj][gi]),
+            .c(mac_c[gi][gj])
         );
 
         // is this synthesizable? -> https://stackoverflow.com/questions/71055554/is-indexing-into-an-array-with-a-signal-synthesizable-in-verilog
