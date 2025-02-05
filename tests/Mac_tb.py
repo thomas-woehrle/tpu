@@ -91,7 +91,7 @@ class Test:
 
 @cocotb.test
 async def test_mac_basic(dut):
-    clock = Clock(dut.clk, 2, "sec")
+    clock = Clock(dut.clk, 10, "ns")
     cocotb.start_soon(clock.start())
 
     # synchronize Clk
