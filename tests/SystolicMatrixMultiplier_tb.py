@@ -4,11 +4,10 @@ import os
 import cocotb
 import numpy as np
 from cocotb.clock import Clock
-from cocotb.queue import Queue
-from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
+from cocotb.triggers import RisingEdge, ClockCycles
 
 from test_base import TestBase
-from utils import pack_matrix_to_int, unpack_int_to_matrix
+from utils import pack_matrix_to_int, unpack_binary_value_to_matrix
 
 # 3 states per N are managed in the matrix multiplier
 STATES_PER_N = 3
@@ -29,8 +28,11 @@ class Input:
 
 
 @dataclasses.dataclass
-class Output:
-    c: np.ndarray
+class DutSnapshot:
+    reset: bool
+    a: np.ndarray | None
+    b: np.ndarray | None
+    c: np.ndarray | None
 
 
 def get_params_from_env() -> Parameters:
@@ -43,39 +45,36 @@ def get_params_from_env() -> Parameters:
     return params
 
 
-class RefactoredTest(TestBase[Parameters, Input, Output]):
+class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
     def __init__(self, dut, params, n_checks):
         super().__init__(dut, params, n_checks)
 
-    def get_input_from_dut(self) -> Input:
-        return Input(
+    def get_dut_snapshot(self) -> DutSnapshot:
+        return DutSnapshot(
             reset=bool(self.dut.reset.value),
-            a=unpack_int_to_matrix(
+            a=unpack_binary_value_to_matrix(
                 self.dut.a.value, (self.params.N, self.params.N), self.params.OP_WIDTH),
-            b=unpack_int_to_matrix(
-                self.dut.b.value, (self.params.N, self.params.N), self.params.OP_WIDTH)
-        )
-
-    def get_output_from_dut(self) -> Output:
-        return Output(
-            c=unpack_int_to_matrix(
+            b=unpack_binary_value_to_matrix(
+                self.dut.b.value, (self.params.N, self.params.N), self.params.OP_WIDTH),
+            c=unpack_binary_value_to_matrix(
                 self.dut.mac_manager.flat_mac_accumulators.value,
                 (self.params.N, self.params.N),
                 self.params.ACC_WIDTH
             )
         )
 
-    async def wait_in_monitor(self, curr_input: Input):
-        if curr_input.reset:
-            "Waiting 1"
+    async def wait_between_snapshots(self, first_snapshot: DutSnapshot):
+        if first_snapshot.reset:
             await ClockCycles(self.dut.clk, 1)
         else:
             await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
 
-    async def score_transaction(self, t: tuple[Input, Output]):
+    async def score_transaction(self, t: tuple[DutSnapshot, DutSnapshot]):
         if t[0].reset:
             cocotb.log.info("Asserting reset")
             assert np.all(t[1].c == 0)
+        elif t[0].a is None or t[0].b is None:
+            assert False, "a or b are None"
         else:
             expected = t[0].a @ t[0].b
             actual = t[1].c
@@ -93,37 +92,34 @@ class RefactoredTest(TestBase[Parameters, Input, Output]):
                 {actual}
             """)
 
-    async def generate_input(self):
+    async def generate_input(self, i: int) -> Input:
         # val_max is exclusive
         val_max = 2 ** self.params.OP_WIDTH
-
-        for i in range(self.n_checks):
-            d = Input(
+        if i % 2 == 0:
+            return Input(
                 reset=True,
                 a=np.random.randint(
                     0, val_max, (self.params.N, self.params.N)),
                 b=np.random.randint(0, val_max, (self.params.N, self.params.N))
             )
-            await self.input_queue.put(d)
-            d = Input(
+        else:
+            return Input(
                 reset=False,
                 a=np.random.randint(
                     0, val_max, (self.params.N, self.params.N)),
                 b=np.random.randint(0, val_max, (self.params.N, self.params.N))
             )
-            await self.input_queue.put(d)
 
-    async def drive_input(self):
-        while True:
-            await FallingEdge(self.dut.clk)
-            d = await self.input_queue.get()
-            self.dut.reset.value = int(d.reset)
-            self.dut.a.value = pack_matrix_to_int(d.a, self.params.OP_WIDTH)
-            self.dut.b.value = pack_matrix_to_int(d.b, self.params.OP_WIDTH)
-            if (d.reset):
-                await ClockCycles(self.dut.clk, 1)
-            else:
-                await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
+    async def drive_input(self, next_input: Input):
+        self.dut.reset.value = int(next_input.reset)
+        self.dut.a.value = pack_matrix_to_int(
+            next_input.a, self.params.OP_WIDTH)
+        self.dut.b.value = pack_matrix_to_int(
+            next_input.b, self.params.OP_WIDTH)
+        if (next_input.reset):
+            await ClockCycles(self.dut.clk, 1)
+        else:
+            await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
 
 
 @cocotb.test
@@ -138,7 +134,7 @@ async def test_systolic_matrix_multiplier(dut):
     await RisingEdge(dut.clk)
 
     n_checks = 20
-    test = RefactoredTest(dut, params, n_checks)
+    test = SystolicMatrixMultiplierTest(dut, params, n_checks)
     test.start_soon()
 
     # Operate
