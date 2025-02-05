@@ -1,4 +1,5 @@
 import numpy as np
+from cocotb.binary import BinaryValue
 
 
 def pack_matrix_to_int(matrix: np.ndarray, op_width: int) -> int:
@@ -14,7 +15,11 @@ def pack_matrix_to_int(matrix: np.ndarray, op_width: int) -> int:
     return int(packed_value)
 
 
-def unpack_int_to_matrix(packed_value: int, matrix_shape: tuple, op_width: int) -> np.ndarray:
+def unpack_binary_value_to_matrix(packed_value: BinaryValue, matrix_shape: tuple, op_width: int) -> np.ndarray | None:
+    # if the passed packed_value is a string it means it is "x" or "z"
+    if not packed_value.is_resolvable:
+        return None
+
     # Create an empty matrix with the given shape
     matrix = np.zeros(np.prod(matrix_shape), dtype=int)
 
