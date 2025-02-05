@@ -1,8 +1,5 @@
 module SystolicMatrixMultiplier #(
     parameter integer N = 2,
-    // MAX_N and LOG2_MAX_N are fixed, so they shouldn't be here, I believe
-    parameter integer MAX_N = 256,
-    parameter integer LOG2_MAX_N = 8,
     parameter integer OP_WIDTH = 8,
     // 32 is big enough for most things. Can be finetuned be on instantiation
     parameter integer ACC_WIDTH = 32
@@ -12,6 +9,8 @@ module SystolicMatrixMultiplier #(
     input [N*N*OP_WIDTH-1:0] a,
     input [N*N*OP_WIDTH-1:0] b
 );
+  localparam integer MAX_N = 256;
+  localparam integer LOG2_MAX_N = 8;
 
   // not sure whether I can/should reuse variables from the outer scope ie the module
   function static [OP_WIDTH-1:0] get_next_a_column_element;
