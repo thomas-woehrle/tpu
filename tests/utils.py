@@ -4,6 +4,8 @@ import numpy as np
 def pack_matrix_to_int(matrix: np.ndarray, op_width: int) -> int:
     packed_value = 0
     for i, value in enumerate(matrix.flatten()):
+        # convert because numpy ints have fixed width
+        value = int(value)
         if len(f"{value:b}") > op_width:
             raise ValueError(
                 f"Limit of {op_width} bits. {value}=={value:b} needs {len(f"{value:b}")} bits")
