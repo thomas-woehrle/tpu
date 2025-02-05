@@ -4,7 +4,7 @@ module SystolicMatrixMultiplier #(
     parameter integer MAX_N = 256,
     parameter integer LOG2_MAX_N = 8,
     parameter integer OP_WIDTH = 8,
-    // 32 for now, because it is big enough for most things. Can be finetuned later
+    // 32 is big enough for most things. Can be finetuned be on instantiation
     parameter integer ACC_WIDTH = 32
 ) (
     input clk,
@@ -19,9 +19,8 @@ module SystolicMatrixMultiplier #(
     input [LOG2_MAX_N-1:0] row;
     input [2+LOG2_MAX_N-1:0] state;
 
-    // a could also use index (state-row)+n*row -> similar to how b is calculated
     if (state >= row && state < row + N)
-      get_next_a_column_element = a[OP_WIDTH*(state+row)+:OP_WIDTH];
+      get_next_a_column_element = a[OP_WIDTH*((state-row)+N*row)+:OP_WIDTH];
     else get_next_a_column_element = 0;
   endfunction
 
@@ -45,8 +44,9 @@ module SystolicMatrixMultiplier #(
   genvar gi;
 
   MacManager #(
-      .N(2),
-      .OP_WIDTH(OP_WIDTH)
+      .N(N),
+      .OP_WIDTH(OP_WIDTH),
+      .ACC_WIDTH(ACC_WIDTH)
   ) mac_manager (
       .clk(clk),
       .reset(reset),
