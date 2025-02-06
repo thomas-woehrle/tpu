@@ -1,3 +1,7 @@
+"""Tests the Mac module
+
+See TestBase class for more information on the test structure.
+"""
 import dataclasses
 import random
 
@@ -47,13 +51,17 @@ class RefactoredTest(TestBase[Parameters, DutSnapshot, Input]):
         )
 
     async def wait_between_snapshots(self, first_snapshot: DutSnapshot):
+        # always wait for the next Edge, nothing more sophisticated is needed
         await RisingEdge(self.dut.clk)
 
     async def score_transaction(self, t: tuple[DutSnapshot, DutSnapshot]):
+        # reset
         if t[0].reset:
             assert t[1].c == 0
+        # not ena -> c should stay the same
         elif not t[0].ena:
             assert t[1].c == t[0].c
+        # else additional accumulation should happen
         else:
             expected = t[0].a * t[0].b + t[0].c
             actual = t[1].c
@@ -63,9 +71,10 @@ class RefactoredTest(TestBase[Parameters, DutSnapshot, Input]):
                 f"expected: {expected}, actual: {int(actual)}")
 
     async def generate_input(self, i: int) -> Input:
-        max_value = 2 ** self.params.OP_WIDTH - 1  # inclusive
+        # inclusive
+        max_value = 2 ** self.params.OP_WIDTH - 1
         return Input(
-            ena=random.random() < 0.9,  # 90%
+            ena=random.random() < 0.9,  # 90% odds
             reset=i % (self.n_accumulations + 1) == 0,
             a=random.randint(0, max_value),
             b=random.randint(0, max_value),
@@ -86,10 +95,11 @@ async def test_mac_basic(dut):
     # synchronize Clk
     await RisingEdge(dut.clk)
 
+    # Setup test
     n_checks = 100
     params = get_params_from_env(Parameters)
     test = RefactoredTest(dut, params, n_checks, 8)
     test.start_soon()
 
-    # Operate
-    await ClockCycles(dut.clk, 100)
+    # Operate an an arbitrary big number of cycles
+    await ClockCycles(dut.clk, 200)

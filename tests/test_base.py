@@ -53,7 +53,6 @@ class TestBase[ParametersT, DutSnapshotT, InputT](ABC):
             first_snapshot: The first snapshot of the current transaction, 
                 received in start_monitor
         """
-        pass
 
     @abstractmethod
     async def score_transaction(self, t: tuple[DutSnapshotT, DutSnapshotT]):
@@ -64,7 +63,6 @@ class TestBase[ParametersT, DutSnapshotT, InputT](ABC):
         Args:
             t: The transaction to score
         """
-        pass
 
     @abstractmethod
     async def generate_input(self, i: int) -> InputT:
@@ -80,8 +78,6 @@ class TestBase[ParametersT, DutSnapshotT, InputT](ABC):
         Returns:
             The next input
         """
-        # could get counter or sim time as argument
-        pass
 
     @abstractmethod
     async def drive_input(self, next_input: InputT):
@@ -95,7 +91,6 @@ class TestBase[ParametersT, DutSnapshotT, InputT](ABC):
         Args:
             next_input: The next_input to drive, usually without waiting before
         """
-        pass
 
     async def start_monitor(self):
         """Starts the monitor

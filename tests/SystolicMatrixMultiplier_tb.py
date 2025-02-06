@@ -1,5 +1,10 @@
+"""Tests the SystolicMatrixMultiplier module
+
+See the documentation in the TestBase class for more information about how
+the test is structured. You can hover over the methods of the inheriting class
+in this file as well to get the documentation information, depending on the code editor.
+"""
 import dataclasses
-import os
 
 import cocotb
 import numpy as np
@@ -54,8 +59,10 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
         )
 
     async def wait_between_snapshots(self, first_snapshot: DutSnapshot):
+        # if the first_snapshot was resetting, then we only have to wait for the next edge
         if first_snapshot.reset:
             await ClockCycles(self.dut.clk, 1)
+        # otherwise we have to wait for the operation to finish
         else:
             await ClockCycles(self.dut.clk, STATES_PER_N * self.params.N)
 
@@ -63,6 +70,7 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
         if t[0].reset:
             cocotb.log.info("Asserting reset")
             assert np.all(t[1].c == 0)
+        # this case should not happen, indicates that a or b are "x" or "z"
         elif t[0].a is None or t[0].b is None:
             assert False, "a or b are None"
         else:
@@ -86,6 +94,7 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
         # val_max is exclusive
         val_max = 2 ** self.params.OP_WIDTH
         if i % 2 == 0:
+            # a and b do not matter here, because reset=True
             return Input(
                 reset=True,
                 a=np.random.randint(
@@ -93,6 +102,7 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
                 b=np.random.randint(0, val_max, (self.params.N, self.params.N))
             )
         else:
+            # a and b randomized
             return Input(
                 reset=False,
                 a=np.random.randint(
@@ -106,6 +116,8 @@ class SystolicMatrixMultiplierTest(TestBase[Parameters, DutSnapshot, Input]):
             next_input.a, self.params.OP_WIDTH)
         self.dut.b.value = pack_matrix_to_int(
             next_input.b, self.params.OP_WIDTH)
+
+        # same waiting rule as in wait_between_transactions
         if (next_input.reset):
             await ClockCycles(self.dut.clk, 1)
         else:
@@ -120,6 +132,7 @@ async def test_systolic_matrix_multiplier(dut):
     # Synchronize clock
     await RisingEdge(dut.clk)
 
+    # Setup test
     params = params = get_params_from_env(Parameters)
     n_checks = 20
     test = SystolicMatrixMultiplierTest(dut, params, n_checks)
