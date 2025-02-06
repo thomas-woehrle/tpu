@@ -1,3 +1,23 @@
+/*
+Creates MACs and manages the input flow to them
+
+Its goal is to implement a systolic array like behavior. This means that the a inputs
+flow through the rows, while the b inputs flow through the columns. At any point in time
+there is a next_a_column containing the next input elements to the respective mac_a_rows
+and vice versa for b.
+
+Parameters:
+  N: The quadratic size of the systolic array.
+  OP_WIDTH: The width of the operands in a and b. Passed to the MAC units
+  ACC_WIDTH: The width of the accumulators. Passed to the MAC units
+
+Inputs:
+  clk: The clock
+  reset: Synchronous active-high reset signal
+  next_a_column: Next_a_column to be processed
+  next_b_row: Next_b_row to be processed
+  flat_mac_accumulators: NxN Array of the accumulators, essentially containing the result
+*/
 module MacManager #(
     parameter integer N = 16,
     parameter integer OP_WIDTH = 8,
@@ -9,9 +29,13 @@ module MacManager #(
     input [N*OP_WIDTH-1:0] next_b_row,
     output reg [N*N*ACC_WIDTH-1:0] flat_mac_accumulators
 );
+
+  // basically, the current a inputs to the NxN MACs are managed in row-major order
+  // while the b inputs to the MACs are managed in column-major order.
+  // This means that the "sliding through" behavior of systolic arrays is easy to implement
   reg [OP_WIDTH-1:0] mac_a_rows[N][N];
   reg [OP_WIDTH-1:0] mac_b_columns[N][N];
-  reg [ACC_WIDTH-1:0] mac_c[N][N];  // implicity mac_c_rows
+  reg [ACC_WIDTH-1:0] mac_c[N][N];  // implicity called mac_c_rows
   integer i, j;
   genvar gi, gj;
 
@@ -27,7 +51,8 @@ module MacManager #(
     else
       for (i = 0; i < N; i = i + 1) begin
         for (j = 0; j < N; j = j + 1) begin
-          // same as in reset case
+          // In the first row/colum, the next input depends on the next row/column.
+          // Afterward, the next input depends on the row/column before that
           if (j == 0) begin
             mac_a_rows[i][j] <= next_a_column[i*OP_WIDTH+:OP_WIDTH];
             mac_b_columns[i][j] <= next_b_row[i*OP_WIDTH+:OP_WIDTH];
